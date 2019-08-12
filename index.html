@@ -1,0 +1,224 @@
+<html>
+
+<head>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            background-color: azure;
+        }
+
+        canvas {
+            margin-left: 500px;
+            margin-top: 150px;
+            margin-right: 500px;
+        }
+
+    </style>
+</head>
+
+<body>
+    <canvas id="gc" width="800" height="600"></canvas>
+    <script>
+        //All the vars that we are using
+        var canvas;
+        var canvasContext;
+        var ballX = 400;
+        var ballY = 300;
+        var ballSpeedX = 8;
+        var ballSpeedY = 5;
+        var playerScore = 0;
+        var compScore = 0;
+        var paddle1Y = 250;
+        var paddle2Y = 250;
+        var PADDLE_WIDTH = 10;
+        var WINNING_LIMIT = 5;
+        var showWinScreen = false;
+        //Constant var, different naming method, uses all caps with underscore
+        const PADDLE_HEIGHT = 100;
+        //The script will only run when the page is done loading
+        window.onload = function() {
+            //Storing our canvas element within the canvas element
+            canvas = document.getElementById("gc");
+            //Getting the context for our canvas(Telling it that the graphics will be 2D)
+            canvasContext = canvas.getContext("2d");
+            canvas.addEventListener("mousedown", handleClick);
+            //Creating the event listner for when the mouse if moved(Code will run only when the mouse is moved)
+            canvas.addEventListener("mousemove", function(evt) {
+                //Passing the current mouse X & Y to the mousePos var
+                var mousePos = calcMousePos(evt);
+                //Splitting the y pos from the variable and making sure that the mouse moves the paddle from the centre
+                paddle1Y = mousePos.y - (PADDLE_HEIGHT / 2);
+            });
+            //Refreshing the canvas to draw the graphics
+            var fps = 60;
+            setInterval(function() {
+                drawEverything();
+                move();
+            }, 1000 / fps);
+
+        }
+
+        function handleClick() {
+            if (showWinScreen) {
+                playerScore = 0;
+                compScore = 0;
+                showWinScreen = false;
+            }
+        }
+        //Gets the X & Y co-ords of the mouse cursor when called
+        function calcMousePos(evt) {
+            //Gets the canvas bounding
+            var rect = canvas.getBoundingClientRect();
+            //Gets the root element of the page(<html>)
+            var root = document.documentElement;
+            //Takes the current x co-ord of the mouse and keeps the movement within the canvas
+            var mouseX = evt.clientX - rect.left - root.scrollLeft;
+            //Takes the current y co-ord of the mouse and keeps the movement within the canvas
+            var mouseY = evt.clientY - rect.top - root.scrollTop;
+            //Returns the X & Y pos of the mouse cursor
+            return {
+                x: mouseX,
+                y: mouseY
+            };
+        }
+
+        //Draws all the shapes when called
+        function drawEverything() {
+            //Draws the black background
+            drawRect(0, 0, canvas.width, canvas.height, "black");
+            if (showWinScreen) {
+                isWinner();
+                return;
+            }
+            //Draws the ball
+            drawCircle(ballX, ballY, 10, "white");
+            //Draws player paddle
+            drawRect(0, paddle1Y, PADDLE_WIDTH, 100, "white");
+            //Draws comp paddle
+            drawRect(canvas.width - PADDLE_WIDTH, paddle2Y, PADDLE_WIDTH, 100, "white");
+            canvasContext.fillText("Score " + playerScore, 100, 100);
+            canvasContext.fillText("Score " + compScore, canvas.width - 100, canvas.height - 500);
+            drawNet();
+
+        }
+
+        function drawNet() {
+            for (var i = 0; i < canvas.height; i += 40) {
+                drawRect(canvas.width / 2 - 1, i, 2, 20, "white");
+            }
+        }
+
+        //Draws a rectangle when it is called
+        function drawRect(leftX, topY, width, height, drawColor) {
+            canvasContext.fillStyle = drawColor;
+            canvasContext.fillRect(leftX, topY, width, height);
+        }
+
+        //Draws a circle when it is called
+        function drawCircle(centerX, centerY, radius, drawColor) {
+            canvasContext.fillStyle = drawColor;
+            canvasContext.beginPath();
+            canvasContext.arc(centerX, centerY, radius, 0, Math.PI * 2, false);
+            canvasContext.fill();
+        }
+
+        //Moves everything when called
+        function move() {
+            if (showWinScreen) {
+                isWinner();
+                return;
+            }
+            compMovement();
+            //Sets the balls x co-ord to its current value plus the speed at which it's going
+            ballX += ballSpeedX;
+            //Sets the balls y co-ord to its current value plus the speed at which it's going
+            ballY += ballSpeedY;
+            //Bounces the ball off of the right side of the canvas when it reaches
+
+            if (ballX >= canvas.width) {
+                playerScore++;
+                resetBall();
+            }
+
+            if (ballX >= canvas.width - 10) {
+                if ((ballY > paddle2Y + 3) && (ballY < paddle2Y + PADDLE_HEIGHT + 3)) {
+                    ballSpeedX = -ballSpeedX;
+                    var deltaY = ballY - (paddle2Y + PADDLE_HEIGHT / 2);
+                    ballSpeedY = deltaY * 0.18;
+                }
+
+            }
+
+            if (ballX <= 0) {
+                compScore++;
+                resetBall();
+            }
+            //Bounces the ball off of the left side of the canvas when it reaches
+            else if (ballX <= 10) {
+                if ((ballY > paddle1Y + 3) && (ballY < paddle1Y + PADDLE_HEIGHT + 3)) {
+                    ballSpeedX = -ballSpeedX;
+                    var deltaY = ballY - (paddle1Y + PADDLE_HEIGHT / 2);
+                    ballSpeedY = deltaY * 0.18;
+                }
+
+            }
+
+            //Bounces the ball off of the top of the canvas when it reaches
+            if (ballY >= canvas.height) {
+                ballSpeedY = -ballSpeedY;
+            }
+            //Bounces the ball off of the bottom of the canvas when it reaches
+            else if (ballY <= 0) {
+                ballSpeedY = -ballSpeedY;
+            }
+        }
+
+        function compMovement() {
+            var paddle2YCenter = paddle2Y + (PADDLE_HEIGHT / 2);
+            if (paddle2YCenter < ballY - 25) {
+                paddle2Y += 7;
+            } else if (paddle2YCenter > ballY + 25) {
+                paddle2Y -= 7;
+            }
+        }
+
+
+
+        //Resets if paddle misses the ball 
+        function resetBall() {
+            if (playerScore >= WINNING_LIMIT || compScore >= WINNING_LIMIT) {
+                showWinScreen = true;
+            }
+            ballSpeedX = -ballSpeedX;
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+        }
+
+        function isWinner() {
+            if (showWinScreen) {
+                canvasContext.fillStyle = "white";
+                canvasContext.fillText("Click to continue", 100, 100);
+                if (playerScore > compScore) {
+                    canvasContext.fillText("Player One is The Winner!!!", 100, 200);
+                } else {
+                    canvasContext.fillText("AI Is The Winner!!!", 100, 200);
+                }
+            }
+        }
+
+
+        //Creates a random colour when called
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF';
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+    </script>
+</body>
+
+</html>
